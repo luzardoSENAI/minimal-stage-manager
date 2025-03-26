@@ -76,19 +76,31 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    // Check if user exists in location state
+    // Verificar se o usuário existe no state da localização
     const locationUser = location.state?.user;
     
     if (locationUser) {
       setUser(locationUser);
     } else {
-      // Redirect to login if no user
-      navigate('/');
+      // Verificar se existe informação do usuário no localStorage
+      const storedRole = localStorage.getItem('userRole');
+      const storedName = localStorage.getItem('userName');
+      
+      if (storedRole && storedName) {
+        setUser({
+          id: '1',
+          name: storedName,
+          role: storedRole as UserRole,
+        });
+      } else {
+        // Redirecionar para login se não existir usuário
+        navigate('/');
+      }
     }
   }, [location, navigate]);
 
   useEffect(() => {
-    // Filter data based on date range
+    // Filtrar dados com base no intervalo de datas
     if (dateRange.from && dateRange.to) {
       const fromDate = new Date(dateRange.from);
       const toDate = new Date(dateRange.to);

@@ -28,8 +28,17 @@ const LoginForm: React.FC = () => {
     localStorage.setItem('userRole', selectedRole);
     localStorage.setItem('userName', getUserNameByRole(selectedRole));
     
+    // Criar objeto de usuário para passar para o dashboard
+    const user = {
+      id: '1',
+      name: getUserNameByRole(selectedRole),
+      role: selectedRole
+    };
+    
     toast.success(`Login como ${getUserNameByRole(selectedRole)} realizado com sucesso!`);
-    navigate('/dashboard');
+    
+    // Passar o objeto de usuário como state para o componente Dashboard
+    navigate('/dashboard', { state: { user } });
   };
 
   const getUserNameByRole = (role: UserRole): string => {
