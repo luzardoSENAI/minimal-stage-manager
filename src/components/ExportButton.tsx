@@ -1,120 +1,114 @@
 
 import React from 'react';
-import { saveAs } from 'file-saver';
-import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { AttendanceRecord } from '@/types';
-import { toast } from 'sonner';
+
+type ExportFormat = 'pdf' | 'xlsx';
 
 interface ExportButtonProps {
   data: AttendanceRecord[];
-  format: 'pdf' | 'xlsx';
+  dateRange: { from: Date | undefined; to: Date | undefined };
 }
 
-const ExportButton: React.FC<ExportButtonProps> = ({ data, format }) => {
-  const formatDate = (dateString: string) => {
-    try {
-      const date = parseISO(dateString);
-      return format(date, 'dd/MM/yyyy', { locale: ptBR });
-    } catch (e) {
-      return dateString;
+const ExportButton: React.FC<ExportButtonProps> = ({ data, dateRange }) => {
+  const exportData = (format: ExportFormat) => {
+    if (format === 'pdf') {
+      exportToPDF(data);
+    } else if (format === 'xlsx') {
+      exportToExcel(data);
     }
   };
 
-  const getDayOfWeek = (dateString: string) => {
-    try {
-      const date = parseISO(dateString);
-      return format(date, 'EEEE', { locale: ptBR });
-    } catch (e) {
-      return '';
-    }
-  };
-
-  const exportToExcel = () => {
-    // Prepare data for Excel
-    const excelData = data.map(record => ({
-      'Aluno': record.studentName,
-      'Data': formatDate(record.date),
-      'Dia da Semana': getDayOfWeek(record.date),
-      'Presente': record.isPresent ? 'Sim' : 'Não',
-      'Hora de Entrada': record.checkInTime || '',
-      'Hora de Saída': record.checkOutTime || '',
-      'Observações': record.notes || ''
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Frequência');
-    
-    // Generate Excel file
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const data_blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    
-    saveAs(data_blob, `frequencia_estagiarios_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success('Relatório Excel exportado com sucesso!');
-  };
-
-  const exportToPdf = () => {
+  const exportToPDF = (records: AttendanceRecord[]) => {
     const doc = new jsPDF();
     
     // Add title
     doc.setFontSize(18);
-    doc.text('Relatório de Frequência de Estagiários', 14, 22);
+    doc.text('Relatório de Frequência', 14, 22);
     
-    // Add date
-    doc.setFontSize(11);
-    doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}`, 14, 30);
-    
-    // Convert data for PDF table
-    const tableData = data.map(record => [
+    // Add date range if available
+    if (dateRange.from && dateRange.to) {
+      doc.setFontSize(12);
+      const fromDate = dateRange.from.toLocaleDateString('pt-BR');
+      const toDate = dateRange.to.toLocaleDateString('pt-BR');
+      doc.text(`Período: ${fromDate} a ${toDate}`, 14, 30);
+    }
+
+    // Prepare data for table
+    const tableColumn = ["Nome", "Data", "Presente", "Entrada", "Saída", "Observações"];
+    const tableRows = records.map(record => [
       record.studentName,
-      formatDate(record.date),
-      getDayOfWeek(record.date),
-      record.isPresent ? 'Presente' : 'Ausente'
+      new Date(record.date).toLocaleDateString('pt-BR'),
+      record.isPresent ? 'Sim' : 'Não',
+      record.checkInTime || '-',
+      record.checkOutTime || '-',
+      record.notes || '-'
     ]);
-    
-    // Generate table
-    (doc as any).autoTable({
-      head: [['Aluno', 'Data', 'Dia da Semana', 'Presente']],
-      body: tableData,
-      startY: 40,
+
+    // Add table to PDF
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: dateRange.from && dateRange.to ? 35 : 30,
       theme: 'grid',
-      styles: { fontSize: 10, cellPadding: 3 },
+      styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [41, 128, 185], textColor: 255 }
     });
-    
-    doc.save(`frequencia_estagiarios_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success('Relatório PDF exportado com sucesso!');
+
+    // Save the PDF
+    doc.save('relatorio-frequencia.pdf');
   };
 
-  const handleExport = () => {
-    if (data.length === 0) {
-      toast.error('Não há dados para exportar');
-      return;
-    }
+  const exportToExcel = (records: AttendanceRecord[]) => {
+    // Prepare data for Excel
+    const excelData = records.map(record => ({
+      'Nome': record.studentName,
+      'Data': new Date(record.date).toLocaleDateString('pt-BR'),
+      'Presente': record.isPresent ? 'Sim' : 'Não',
+      'Entrada': record.checkInTime || '-',
+      'Saída': record.checkOutTime || '-',
+      'Observações': record.notes || '-'
+    }));
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Frequência');
+
+    // Generate buffer
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     
-    if (format === 'xlsx') {
-      exportToExcel();
-    } else {
-      exportToPdf();
-    }
+    // Save the file
+    saveAs(data, 'relatorio-frequencia.xlsx');
   };
 
   return (
-    <Button 
-      onClick={handleExport} 
-      variant={format === 'xlsx' ? 'default' : 'outline'} 
-      size="sm"
-      className="text-sm"
-    >
-      <Download className="h-4 w-4 mr-2" />
-      {format === 'xlsx' ? 'Exportar Excel' : 'Exportar PDF'}
-    </Button>
+    <div className="flex space-x-2">
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => exportData('pdf')}
+        className="flex items-center space-x-1"
+      >
+        <Download size={16} />
+        <span>PDF</span>
+      </Button>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => exportData('xlsx')}
+        className="flex items-center space-x-1"
+      >
+        <Download size={16} />
+        <span>Excel</span>
+      </Button>
+    </div>
   );
 };
 
