@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { DayClickEventHandler } from 'react-day-picker';
 
 interface DateRangePickerProps {
   dateRange: DateRange;
@@ -19,6 +20,13 @@ interface DateRangePickerProps {
 }
 
 const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRange }) => {
+  const handleSelect = (range: { from: Date; to?: Date }) => {
+    setDateRange({
+      from: range.from,
+      to: range.to
+    });
+  };
+
   return (
     <div className="grid gap-2">
       <Popover>
@@ -51,8 +59,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRan
             initialFocus
             mode="range"
             defaultMonth={dateRange?.from}
-            selected={dateRange}
-            onSelect={setDateRange}
+            selected={{
+              from: dateRange.from,
+              to: dateRange.to
+            }}
+            onSelect={handleSelect}
             locale={ptBR}
             numberOfMonths={2}
           />
