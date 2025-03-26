@@ -4,18 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Logo from './Logo';
+import { User } from '@/types';
 
 interface HeaderProps {
-  userName: string;
-  userRole: string;
+  user: User | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ userName, userRole }) => {
+const Header: React.FC<HeaderProps> = ({ user }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
     toast.success('Logout realizado com sucesso');
     navigate('/');
   };
@@ -37,25 +35,27 @@ const Header: React.FC<HeaderProps> = ({ userName, userRole }) => {
     <header className="w-full bg-white border-b border-border px-6 py-3 flex justify-between items-center sticky top-0 z-10 backdrop-blur-sm bg-white/70">
       <Logo />
       
-      <div className="flex items-center gap-4">
-        <div className="text-right mr-2">
-          <p className="font-medium text-sm">{userName}</p>
-          <p className="text-xs text-muted-foreground">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-              {getRoleLabel(userRole)}
-            </span>
-          </p>
+      {user && (
+        <div className="flex items-center gap-4">
+          <div className="text-right mr-2">
+            <p className="font-medium text-sm">{user.name}</p>
+            <p className="text-xs text-muted-foreground">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                {getRoleLabel(user.role)}
+              </span>
+            </p>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogout}
+            className="text-sm"
+          >
+            Sair
+          </Button>
         </div>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleLogout}
-          className="text-sm"
-        >
-          Sair
-        </Button>
-      </div>
+      )}
     </header>
   );
 };

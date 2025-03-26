@@ -6,7 +6,6 @@ import AttendanceTable from '@/components/AttendanceTable';
 import DateRangePicker from '@/components/DateRangePicker';
 import ExportButton from '@/components/ExportButton';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { AttendanceRecord, DateRange, User } from '@/types';
 
 // Mock data for attendance records
@@ -105,41 +104,6 @@ const Dashboard = () => {
     }
   }, [dateRange, attendanceData]);
 
-  const handleAttendanceUpdate = (recordId: string, isPresent: boolean, notes?: string) => {
-    setAttendanceData(prevData => {
-      const newData = [...prevData];
-      const recordIndex = newData.findIndex(record => record.id === recordId);
-      
-      if (recordIndex !== -1) {
-        newData[recordIndex] = {
-          ...newData[recordIndex],
-          isPresent,
-          notes: notes || newData[recordIndex].notes,
-        };
-      }
-      
-      return newData;
-    });
-  };
-
-  const canEditRecord = (date: string) => {
-    if (!user) return false;
-    
-    const day = new Date(date).getDay();
-    
-    // School can edit Monday (1) and Tuesday (2)
-    if (user.role === 'school' && (day === 1 || day === 2)) {
-      return true;
-    }
-    
-    // Company can edit Wednesday (3), Thursday (4), and Friday (5)
-    if (user.role === 'company' && (day === 3 || day === 4 || day === 5)) {
-      return true;
-    }
-    
-    return false;
-  };
-
   return (
     <div className="min-h-screen bg-background animate-fade-in">
       <Header user={user} />
@@ -164,10 +128,9 @@ const Dashboard = () => {
         </Card>
         
         <AttendanceTable 
-          data={filteredData}
-          onUpdateAttendance={handleAttendanceUpdate}
-          canEdit={canEditRecord}
+          attendanceData={filteredData}
           userRole={user?.role || 'student'}
+          setAttendanceData={setAttendanceData}
         />
       </main>
     </div>

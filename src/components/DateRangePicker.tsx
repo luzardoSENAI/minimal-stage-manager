@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
@@ -14,11 +14,11 @@ import {
 } from '@/components/ui/popover';
 
 interface DateRangePickerProps {
-  date: DateRange;
-  setDate: (date: DateRange) => void;
+  dateRange: DateRange;
+  setDateRange: React.Dispatch<React.SetStateAction<DateRange>>;
 }
 
-const DateRangePicker: React.FC<DateRangePickerProps> = ({ date, setDate }) => {
+const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRange }) => {
   return (
     <div className="grid gap-2">
       <Popover>
@@ -28,18 +28,18 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ date, setDate }) => {
             variant={"outline"}
             className={cn(
               "w-[300px] justify-start text-left font-normal",
-              !date && "text-muted-foreground"
+              !dateRange && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {date?.from ? (
-              date.to ? (
+            {dateRange?.from ? (
+              dateRange.to ? (
                 <>
-                  {format(date.from, "dd/MM/yyyy", { locale: ptBR })} -{" "}
-                  {format(date.to, "dd/MM/yyyy", { locale: ptBR })}
+                  {format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })} -{" "}
+                  {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
                 </>
               ) : (
-                format(date.from, "dd/MM/yyyy", { locale: ptBR })
+                format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })
               )
             ) : (
               <span>Selecione um período</span>
@@ -50,9 +50,9 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ date, setDate }) => {
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={date?.from}
-            selected={date}
-            onSelect={setDate}
+            defaultMonth={dateRange?.from}
+            selected={dateRange}
+            onSelect={setDateRange}
             locale={ptBR}
             numberOfMonths={2}
           />
