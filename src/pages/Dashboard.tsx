@@ -9,6 +9,8 @@ import ExportButton from '@/components/ExportButton';
 import StudentSelector from '@/components/StudentSelector';
 import AddStudentButton from '@/components/AddStudentButton';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 import { AttendanceRecord, DateRange, User, UserRole } from '@/types';
 
 // Mock data for attendance records
@@ -166,6 +168,14 @@ const Dashboard = () => {
               </div>
               <div className="flex items-center gap-2">
                 {user?.role !== 'student' && <AddStudentButton />}
+                <Button 
+                  onClick={() => navigate('/attendance-registration')}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Cadastrar Frequência
+                </Button>
                 <ExportButton data={filteredData} dateRange={dateRange} />
               </div>
             </div>
