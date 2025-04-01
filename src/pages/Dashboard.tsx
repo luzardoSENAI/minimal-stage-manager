@@ -1,9 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { startOfWeek, endOfWeek } from 'date-fns';
 import Header from '@/components/Header';
 import AttendanceTable from '@/components/AttendanceTable';
 import DateRangePicker from '@/components/DateRangePicker';
 import ExportButton from '@/components/ExportButton';
+import StudentSelector from '@/components/StudentSelector';
+import AddStudentButton from '@/components/AddStudentButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { AttendanceRecord, DateRange, User, UserRole } from '@/types';
 
@@ -63,15 +67,28 @@ const mockAttendanceData: AttendanceRecord[] = [
   },
 ];
 
+// Lista de estudantes
+export const mockStudents = [
+  { id: '101', name: 'Ana Silva', company: 'Tech Solutions', contact: 'ana.silva@email.com' },
+  { id: '102', name: 'Carlos Mendes', company: 'InnovaSoft', contact: 'carlos.mendes@email.com' },
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>(mockAttendanceData);
   const [filteredData, setFilteredData] = useState<AttendanceRecord[]>(mockAttendanceData);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  
+  // Configurar o intervalo de datas para a semana atual por padrão
+  const today = new Date();
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Começa na segunda-feira
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 }); // Termina no domingo
+  
   const [dateRange, setDateRange] = useState<DateRange>({
-    from: undefined,
-    to: undefined,
+    from: weekStart,
+    to: weekEnd,
   });
 
   useEffect(() => {
@@ -99,21 +116,26 @@ const Dashboard = () => {
   }, [location, navigate]);
 
   useEffect(() => {
-    // Filtrar dados com base no intervalo de datas
+    // Filtrar dados com base no intervalo de datas e no estudante selecionado
+    let filtered = attendanceData;
+    
     if (dateRange.from && dateRange.to) {
       const fromDate = new Date(dateRange.from);
       const toDate = new Date(dateRange.to);
       
-      const filtered = attendanceData.filter(record => {
+      filtered = filtered.filter(record => {
         const recordDate = new Date(record.date);
         return recordDate >= fromDate && recordDate <= toDate;
       });
-      
-      setFilteredData(filtered);
-    } else {
-      setFilteredData(attendanceData);
     }
-  }, [dateRange, attendanceData]);
+    
+    // Filtrar por estudante se houver um selecionado
+    if (selectedStudentId) {
+      filtered = filtered.filter(record => record.studentId === selectedStudentId);
+    }
+    
+    setFilteredData(filtered);
+  }, [dateRange, attendanceData, selectedStudentId]);
 
   return (
     <div className="min-h-screen bg-background animate-fade-in">
@@ -131,9 +153,21 @@ const Dashboard = () => {
         
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
-              <ExportButton data={filteredData} dateRange={dateRange} />
+            <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+                {user?.role !== 'student' && (
+                  <StudentSelector 
+                    students={mockStudents} 
+                    selectedStudentId={selectedStudentId} 
+                    setSelectedStudentId={setSelectedStudentId} 
+                  />
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {user?.role !== 'student' && <AddStudentButton />}
+                <ExportButton data={filteredData} dateRange={dateRange} />
+              </div>
             </div>
           </CardContent>
         </Card>

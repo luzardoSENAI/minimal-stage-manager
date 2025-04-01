@@ -22,3 +22,10 @@ export interface DateRange {
   from: Date | undefined;
   to: Date | undefined;
 }
+
+export interface Student {
+  id: string;
+  name: string;
+  company: string;
+  contact: string;
+}
