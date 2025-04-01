@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -6,7 +5,7 @@ import AttendanceTable from '@/components/AttendanceTable';
 import DateRangePicker from '@/components/DateRangePicker';
 import ExportButton from '@/components/ExportButton';
 import { Card, CardContent } from '@/components/ui/card';
-import { AttendanceRecord, DateRange, User } from '@/types';
+import { AttendanceRecord, DateRange, User, UserRole } from '@/types';
 
 // Mock data for attendance records
 const mockAttendanceData: AttendanceRecord[] = [

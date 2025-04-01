@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Logo from './Logo';
+import ThemeToggle from './ThemeToggle';
 import { User } from '@/types';
 
 interface HeaderProps {
@@ -32,11 +33,13 @@ const Header: React.FC<HeaderProps> = ({ user }) => {
   };
 
   return (
-    <header className="w-full bg-white border-b border-border px-6 py-3 flex justify-between items-center sticky top-0 z-10 backdrop-blur-sm bg-white/70">
+    <header className="w-full bg-background border-b border-border px-6 py-3 flex justify-between items-center sticky top-0 z-10 backdrop-blur-sm">
       <Logo />
       
       {user && (
         <div className="flex items-center gap-4">
+          <ThemeToggle />
+          
           <div className="text-right mr-2">
             <p className="font-medium text-sm">{user.name}</p>
             <p className="text-xs text-muted-foreground">

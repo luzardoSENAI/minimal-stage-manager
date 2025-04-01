@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { format, parseISO, isMonday, isTuesday, isWednesday, isThursday, isFriday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AttendanceRecord, UserRole } from '@/types';
@@ -13,12 +13,15 @@ interface AttendanceTableProps {
 }
 
 const AttendanceTable: React.FC<AttendanceTableProps> = ({ 
-  attendanceData, 
+  attendanceData = [], 
   userRole,
   setAttendanceData 
 }) => {
   const handleAttendanceChange = (recordId: string, isPresent: boolean) => {
-    const dateObj = parseISO(attendanceData.find(record => record.id === recordId)?.date || '');
+    const record = attendanceData.find(record => record.id === recordId);
+    if (!record) return;
+    
+    const dateObj = parseISO(record.date);
     
     // Check permissions based on user role and day of week
     const isSchool = userRole === 'school';
@@ -90,11 +93,11 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
                 <td className="capitalize">{getDayOfWeek(record.date)}</td>
                 <td>
                   {record.isPresent ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
                       Presente
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
                       Ausente
                     </span>
                   )}
