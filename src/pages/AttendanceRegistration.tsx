@@ -46,6 +46,13 @@ const AttendanceRegistration = () => {
         navigate('/');
       }
     }
+
+    // Redirect students as they cannot register attendance
+    const currentRole = locationUser?.role || localStorage.getItem('userRole');
+    if (currentRole === 'student') {
+      toast.error('Alunos não podem cadastrar frequência');
+      navigate('/dashboard');
+    }
   }, [navigate, location]);
 
   const handleRegister = () => {

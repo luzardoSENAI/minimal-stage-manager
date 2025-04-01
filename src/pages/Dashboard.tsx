@@ -94,24 +94,45 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
+    console.log("Dashboard useEffect running");
+    console.log("Location state:", location.state);
+    
     // Verificar se o usuário existe no state da localização
     const locationUser = location.state?.user;
     
     if (locationUser) {
+      console.log("Using user from location state:", locationUser);
       setUser(locationUser);
+      
+      // For student role, filter data for that student only
+      if (locationUser.role === 'student') {
+        // This is just a mock implementation using fixed IDs
+        // In a real app, you'd use the actual student ID
+        setSelectedStudentId('101'); // Setting to Ana Silva for demonstration
+      }
     } else {
       // Verificar se existe informação do usuário no localStorage
       const storedRole = localStorage.getItem('userRole');
       const storedName = localStorage.getItem('userName');
       
+      console.log("Using stored user data:", storedRole, storedName);
+      
       if (storedRole && storedName) {
-        setUser({
+        const userObj = {
           id: '1',
           name: storedName,
           role: storedRole as UserRole,
-        });
+        };
+        setUser(userObj);
+        
+        // For student role, filter data for that student only
+        if (storedRole === 'student') {
+          // This is just a mock implementation using fixed IDs
+          setSelectedStudentId('101'); // Setting to Ana Silva for demonstration
+        }
       } else {
         // Redirecionar para login se não existir usuário
+        console.log("No user data found, redirecting to login");
         navigate('/');
       }
     }
@@ -168,14 +189,16 @@ const Dashboard = () => {
               </div>
               <div className="flex items-center gap-2">
                 {user?.role !== 'student' && <AddStudentButton />}
-                <Button 
-                  onClick={() => navigate('/attendance-registration')}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  Cadastrar Frequência
-                </Button>
+                {user?.role !== 'student' && (
+                  <Button 
+                    onClick={() => navigate('/attendance-registration', { state: { user } })}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    Cadastrar Frequência
+                  </Button>
+                )}
                 <ExportButton data={filteredData} dateRange={dateRange} />
               </div>
             </div>
