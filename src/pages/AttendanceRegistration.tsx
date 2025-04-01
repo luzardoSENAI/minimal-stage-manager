@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Header from '@/components/Header';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 const AttendanceRegistration = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   
   // Configure default date range for the current week
@@ -45,7 +46,7 @@ const AttendanceRegistration = () => {
         navigate('/');
       }
     }
-  }, [navigate]);
+  }, [navigate, location]);
 
   const handleRegister = () => {
     if (!dateRange.from || !dateRange.to) {
