@@ -5,6 +5,14 @@ import { ptBR } from 'date-fns/locale';
 import { AttendanceRecord, UserRole } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface AttendanceTableProps {
   attendanceData: AttendanceRecord[];
@@ -95,9 +103,145 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
     return grouped;
   }, [attendanceData, userRole]);
 
+  // Group attendance by date for weekly view
+  const groupedByDate = React.useMemo(() => {
+    const byDate: Record<string, Record<string, AttendanceRecord>> = {};
+    
+    attendanceData.forEach(record => {
+      const dayOfWeek = getDayOfWeek(record.date);
+      
+      if (!byDate[dayOfWeek]) {
+        byDate[dayOfWeek] = {};
+      }
+      
+      byDate[dayOfWeek][record.studentId] = record;
+    });
+    
+    return byDate;
+  }, [attendanceData]);
+
+  // Get unique student IDs and names
+  const students = React.useMemo(() => {
+    const uniqueStudents = new Map<string, string>();
+    
+    attendanceData.forEach(record => {
+      if (!uniqueStudents.has(record.studentId)) {
+        uniqueStudents.set(record.studentId, record.studentName);
+      }
+    });
+    
+    return Array.from(uniqueStudents.entries()).map(([id, name]) => ({ id, name }));
+  }, [attendanceData]);
+
+  // Get unique dates and sort them
+  const weekDays = React.useMemo(() => {
+    const uniqueDates = new Set<string>();
+    
+    attendanceData.forEach(record => {
+      uniqueDates.add(getDayOfWeek(record.date));
+    });
+    
+    // Sort days of the week in correct order: Monday to Friday
+    const dayOrder = ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira'];
+    
+    return Array.from(uniqueDates).sort((a, b) => {
+      return dayOrder.indexOf(a) - dayOrder.indexOf(b);
+    });
+  }, [attendanceData]);
+
+  // Render weekly table layout for "All" view
+  const renderWeeklyTable = () => {
+    if (students.length === 0 || weekDays.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground border border-border rounded-lg">
+          Nenhum registro de frequência encontrado para o período selecionado
+        </div>
+      );
+    }
+
+    return (
+      <div className="overflow-auto rounded-md border border-border shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">Aluno</TableHead>
+              {weekDays.map((day) => (
+                <TableHead key={day} className="min-w-[150px]">
+                  <span className="capitalize">{day}</span>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.map((student) => (
+              <TableRow key={student.id}>
+                <TableCell className="font-medium">{student.name}</TableCell>
+                {weekDays.map((day) => {
+                  const record = groupedByDate[day]?.[student.id];
+                  
+                  if (!record) {
+                    return (
+                      <TableCell key={day}>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          Sem registro
+                        </span>
+                      </TableCell>
+                    );
+                  }
+                  
+                  return (
+                    <TableCell key={day}>
+                      <div className="flex flex-col gap-1">
+                        <div>
+                          {record.isPresent ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                              Presente
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
+                              Ausente
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          {canEditRecord(record.date) && (
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`attendance-${record.id}`}
+                                checked={record.isPresent}
+                                onCheckedChange={(checked) => 
+                                  handleAttendanceChange(record.id, checked === true)
+                                }
+                              />
+                              <label 
+                                htmlFor={`attendance-${record.id}`}
+                                className="text-xs cursor-pointer"
+                              >
+                                Marcar presença
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
   // Render table differently based on user role
   if (userRole !== 'student') {
-    // For school and company users - group by student
+    // If we have many students (or viewing "All"), use the weekly table layout
+    if (Object.keys(groupedAttendance).length > 5) {
+      return renderWeeklyTable();
+    }
+    
+    // For school and company users with fewer students - group by student
     return (
       <div className="space-y-6 animate-fade-in">
         {Object.keys(groupedAttendance).length > 0 ? (

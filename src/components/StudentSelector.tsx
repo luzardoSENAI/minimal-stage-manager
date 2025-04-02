@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Select,
@@ -29,7 +30,7 @@ interface StudentSelectorProps {
   selectedStudentId: string | null;
   setSelectedStudentId: (id: string | null) => void;
   selectedStudentsIds?: string[];
-  setSelectedStudentsIds?: (ids: string[]) => void;
+  setSelectedStudentsIds?: (ids: string[] | ((prev: string[]) => string[])) => void;
   selectionMode?: 'single' | 'multiple' | 'all';
   setSelectionMode?: (mode: 'single' | 'multiple' | 'all') => void;
 }
@@ -52,7 +53,7 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
   };
 
   const handleStudentCheckChange = (studentId: string) => {
-    setSelectedStudentsIds(prev => {
+    setSelectedStudentsIds((prev: string[]) => {
       if (prev.includes(studentId)) {
         return prev.filter(id => id !== studentId);
       } else {

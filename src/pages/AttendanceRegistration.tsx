@@ -63,6 +63,23 @@ const AttendanceRegistration = () => {
       toast.error('Alunos não podem cadastrar frequência');
       navigate('/dashboard');
     }
+
+    // Check if we have selection mode and selected students from Dashboard
+    const locationSelectionMode = location.state?.selectionMode;
+    const locationSelectedStudentId = location.state?.selectedStudentId;
+    const locationSelectedStudentsIds = location.state?.selectedStudentsIds;
+
+    if (locationSelectionMode) {
+      setSelectionMode(locationSelectionMode);
+    }
+
+    if (locationSelectedStudentId) {
+      setSelectedStudentId(locationSelectedStudentId);
+    }
+
+    if (locationSelectedStudentsIds) {
+      setSelectedStudentsIds(locationSelectedStudentsIds);
+    }
   }, [navigate, location]);
 
   const handleRegister = async () => {
@@ -183,6 +200,9 @@ const AttendanceRegistration = () => {
                 <div>
                   <h2 className="text-lg font-medium mb-4">Selecione o período</h2>
                   <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Os finais de semana serão excluídos automaticamente.
+                  </p>
                 </div>
               </div>
               

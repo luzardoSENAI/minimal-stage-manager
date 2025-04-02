@@ -83,6 +83,8 @@ const Dashboard = () => {
   const [filteredData, setFilteredData] = useState<AttendanceRecord[]>(mockAttendanceData);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedStudentForRegistration, setSelectedStudentForRegistration] = useState<string | null>(null);
+  const [selectedStudentsIds, setSelectedStudentsIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState<'single' | 'multiple' | 'all'>('all');
   
   // Configurar o intervalo de datas para a semana atual por padrão
   const today = new Date();
@@ -180,19 +182,30 @@ const Dashboard = () => {
       });
     }
     
-    // Filtrar por estudante se houver um selecionado
-    if (selectedStudentId) {
+    // Filter by student selection mode
+    if (selectionMode === 'single' && selectedStudentId) {
+      filtered = filtered.filter(record => record.studentId === selectedStudentId);
+    } else if (selectionMode === 'multiple' && selectedStudentsIds.length > 0) {
+      filtered = filtered.filter(record => selectedStudentsIds.includes(record.studentId));
+    }
+    // If selectionMode is 'all', we don't filter by student
+    
+    // For student role, always filter by their ID
+    if (user?.role === 'student') {
       filtered = filtered.filter(record => record.studentId === selectedStudentId);
     }
     
     setFilteredData(filtered);
-  }, [dateRange, attendanceData, selectedStudentId]);
+  }, [dateRange, attendanceData, selectedStudentId, selectedStudentsIds, selectionMode, user]);
 
   const handleRegisterAttendance = () => {
+    // Pass the selection mode and selected students to attendance registration page
     navigate('/attendance-registration', { 
       state: { 
         user,
-        selectedStudentId: selectedStudentForRegistration
+        selectedStudentId: selectedStudentId,
+        selectedStudentsIds: selectedStudentsIds,
+        selectionMode: selectionMode
       } 
     });
   };
@@ -220,7 +233,11 @@ const Dashboard = () => {
                   <StudentSelector 
                     students={mockStudents} 
                     selectedStudentId={selectedStudentId} 
-                    setSelectedStudentId={setSelectedStudentId} 
+                    setSelectedStudentId={setSelectedStudentId}
+                    selectedStudentsIds={selectedStudentsIds}
+                    setSelectedStudentsIds={setSelectedStudentsIds}
+                    selectionMode={selectionMode}
+                    setSelectionMode={setSelectionMode}
                   />
                 )}
               </div>

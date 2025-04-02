@@ -33,7 +33,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRan
             id="date"
             variant={"outline"}
             className={cn(
-              "w-full md:w-[300px] justify-start text-left font-normal",
+              "w-full justify-start text-left font-normal",
               !dateRange && "text-muted-foreground"
             )}
           >
@@ -52,7 +52,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRan
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 z-50" align="start">
           <Calendar
             initialFocus
             mode="range"
