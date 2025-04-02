@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, parseISO, isMonday, isTuesday, isWednesday, isThursday, isFriday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -31,7 +30,6 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
     
     const dateObj = parseISO(record.date);
     
-    // Check permissions based on user role and day of week
     const isSchool = userRole === 'school';
     const isCompany = userRole === 'company';
     
@@ -55,7 +53,6 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
           : record
       );
       
-      // Update localStorage
       localStorage.setItem('attendanceRecords', JSON.stringify(updatedData));
       
       return updatedData;
@@ -85,7 +82,6 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
            (userRole === 'company' && isCompanyDay);
   };
 
-  // Group attendance by student for school and company views
   const groupedAttendance = React.useMemo(() => {
     if (userRole === 'student') {
       return {};
@@ -103,7 +99,6 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
     return grouped;
   }, [attendanceData, userRole]);
 
-  // Group attendance by date for weekly view
   const groupedByDate = React.useMemo(() => {
     const byDate: Record<string, Record<string, AttendanceRecord>> = {};
     
@@ -120,7 +115,6 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
     return byDate;
   }, [attendanceData]);
 
-  // Get unique student IDs and names
   const students = React.useMemo(() => {
     const uniqueStudents = new Map<string, string>();
     
@@ -133,7 +127,6 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
     return Array.from(uniqueStudents.entries()).map(([id, name]) => ({ id, name }));
   }, [attendanceData]);
 
-  // Get unique dates and sort them
   const weekDays = React.useMemo(() => {
     const uniqueDates = new Set<string>();
     
@@ -141,15 +134,15 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
       uniqueDates.add(getDayOfWeek(record.date));
     });
     
-    // Sort days of the week in correct order: Monday to Friday
     const dayOrder = ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira'];
     
-    return Array.from(uniqueDates).sort((a, b) => {
-      return dayOrder.indexOf(a) - dayOrder.indexOf(b);
-    });
+    return Array.from(uniqueDates)
+      .filter(day => dayOrder.includes(day))
+      .sort((a, b) => {
+        return dayOrder.indexOf(a) - dayOrder.indexOf(b);
+      });
   }, [attendanceData]);
 
-  // Render weekly table layout for "All" view
   const renderWeeklyTable = () => {
     if (students.length === 0 || weekDays.length === 0) {
       return (
@@ -164,9 +157,9 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px]">Aluno</TableHead>
+              <TableHead className="w-[180px] sticky left-0 bg-background z-10">Aluno</TableHead>
               {weekDays.map((day) => (
-                <TableHead key={day} className="min-w-[150px]">
+                <TableHead key={day} className="min-w-[150px] text-center">
                   <span className="capitalize">{day}</span>
                 </TableHead>
               ))}
@@ -175,13 +168,13 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
           <TableBody>
             {students.map((student) => (
               <TableRow key={student.id}>
-                <TableCell className="font-medium">{student.name}</TableCell>
+                <TableCell className="font-medium sticky left-0 bg-background z-10">{student.name}</TableCell>
                 {weekDays.map((day) => {
                   const record = groupedByDate[day]?.[student.id];
                   
                   if (!record) {
                     return (
-                      <TableCell key={day}>
+                      <TableCell key={day} className="text-center">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           Sem registro
                         </span>
@@ -190,8 +183,8 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
                   }
                   
                   return (
-                    <TableCell key={day}>
-                      <div className="flex flex-col gap-1">
+                    <TableCell key={day} className="text-center">
+                      <div className="flex flex-col gap-1 items-center">
                         <div>
                           {record.isPresent ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
@@ -203,7 +196,7 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
                             </span>
                           )}
                         </div>
-                        <div>
+                        <div className="mt-1">
                           {canEditRecord(record.date) && (
                             <div className="flex items-center space-x-2">
                               <Checkbox
@@ -234,19 +227,15 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
     );
   };
 
-  // Render table differently based on user role
   if (userRole !== 'student') {
-    // If we have many students (or viewing "All"), use the weekly table layout
-    if (Object.keys(groupedAttendance).length > 5) {
+    if (Object.keys(groupedAttendance).length > 5 || selectionMode === 'all') {
       return renderWeeklyTable();
     }
     
-    // For school and company users with fewer students - group by student
     return (
       <div className="space-y-6 animate-fade-in">
         {Object.keys(groupedAttendance).length > 0 ? (
           Object.entries(groupedAttendance).map(([studentId, records]) => {
-            // Get student name from first record
             const studentName = records[0]?.studentName || "Unknown Student";
             
             return (
@@ -324,7 +313,6 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
     );
   }
 
-  // For student users - regular table
   return (
     <div className="w-full overflow-auto rounded-md border border-border shadow-sm animate-fade-in">
       <table className="attendance-table">

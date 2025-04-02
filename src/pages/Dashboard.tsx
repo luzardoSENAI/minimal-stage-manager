@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import Header from '@/components/Header';
 import AttendanceTable from '@/components/AttendanceTable';
 import DateRangePicker from '@/components/DateRangePicker';
@@ -10,7 +10,8 @@ import StudentSelector from '@/components/StudentSelector';
 import AddStudentButton from '@/components/AddStudentButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { AttendanceRecord, DateRange, User, UserRole } from '@/types';
 
 // Mock data for attendance records
@@ -85,6 +86,7 @@ const Dashboard = () => {
   const [selectedStudentForRegistration, setSelectedStudentForRegistration] = useState<string | null>(null);
   const [selectedStudentsIds, setSelectedStudentsIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState<'single' | 'multiple' | 'all'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Configurar o intervalo de datas para a semana atual por padrão
   const today = new Date();
@@ -174,12 +176,25 @@ const Dashboard = () => {
     
     if (dateRange.from && dateRange.to) {
       const fromDate = new Date(dateRange.from);
+      // Set hours to 0 to ensure full day coverage
+      fromDate.setHours(0, 0, 0, 0);
+      
       const toDate = new Date(dateRange.to);
+      // Set hours to 23:59:59 to ensure full day coverage
+      toDate.setHours(23, 59, 59, 999);
       
       filtered = filtered.filter(record => {
         const recordDate = new Date(record.date);
         return recordDate >= fromDate && recordDate <= toDate;
       });
+    }
+    
+    // Apply search filter if search term is provided
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(record => 
+        record.studentName.toLowerCase().includes(term)
+      );
     }
     
     // Filter by student selection mode
@@ -196,7 +211,7 @@ const Dashboard = () => {
     }
     
     setFilteredData(filtered);
-  }, [dateRange, attendanceData, selectedStudentId, selectedStudentsIds, selectionMode, user]);
+  }, [dateRange, attendanceData, selectedStudentId, selectedStudentsIds, selectionMode, user, searchTerm]);
 
   const handleRegisterAttendance = () => {
     // Pass the selection mode and selected students to attendance registration page
@@ -226,10 +241,27 @@ const Dashboard = () => {
         
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
-                {user?.role !== 'student' && (
+            <div className="flex flex-col space-y-4">
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                <div className="w-full md:w-1/2">
+                  <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+                </div>
+                <div className="w-full md:w-1/2">
+                  <div className="relative w-full">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Pesquisar por aluno..."
+                      className="pl-8 w-full"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {user?.role !== 'student' && (
+                <div className="flex flex-wrap gap-2 items-center">
                   <StudentSelector 
                     students={mockStudents} 
                     selectedStudentId={selectedStudentId} 
@@ -239,22 +271,24 @@ const Dashboard = () => {
                     selectionMode={selectionMode}
                     setSelectionMode={setSelectionMode}
                   />
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {user?.role !== 'student' && <AddStudentButton />}
-                {user?.role !== 'student' && (
-                  <Button 
-                    onClick={handleRegisterAttendance}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    Cadastrar Frequência
-                  </Button>
-                )}
-                <ExportButton data={filteredData} dateRange={dateRange} />
-              </div>
+                </div>
+              )}
+              
+              {user?.role !== 'student' && (
+                <div className="flex flex-wrap gap-2 items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AddStudentButton />
+                    <Button 
+                      onClick={handleRegisterAttendance}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Cadastrar Frequência
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -264,6 +298,11 @@ const Dashboard = () => {
           userRole={user?.role || 'student'}
           setAttendanceData={setAttendanceData}
         />
+        
+        {/* Export buttons below the data table */}
+        <div className="mt-6 flex justify-end">
+          <ExportButton data={filteredData} dateRange={dateRange} />
+        </div>
       </main>
     </div>
   );

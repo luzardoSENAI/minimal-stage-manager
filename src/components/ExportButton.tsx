@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
@@ -89,24 +88,22 @@ const ExportButton: React.FC<ExportButtonProps> = ({ data, dateRange }) => {
   };
 
   return (
-    <div className="flex space-x-2">
+    <div className="flex flex-wrap gap-2">
       <Button 
         variant="outline" 
-        size="sm" 
         onClick={() => exportData('pdf')}
-        className="flex items-center space-x-1"
+        className="flex items-center gap-2"
       >
-        <Download size={16} />
-        <span>PDF</span>
+        <Download className="h-4 w-4" />
+        <span>Exportar PDF</span>
       </Button>
       <Button 
         variant="outline" 
-        size="sm" 
         onClick={() => exportData('xlsx')}
-        className="flex items-center space-x-1"
+        className="flex items-center gap-2"
       >
-        <Download size={16} />
-        <span>Excel</span>
+        <Download className="h-4 w-4" />
+        <span>Exportar Excel</span>
       </Button>
     </div>
   );
