@@ -1,224 +1,269 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CalendarClock } from "lucide-react";
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import Header from '@/components/Header';
-import DateRangePicker from '@/components/DateRangePicker';
-import StudentSelector from '@/components/StudentSelector';
-import { DateRange, User, AttendanceRecord } from '@/types';
-import { startOfWeek, endOfWeek, eachDayOfInterval, format, isWeekend } from 'date-fns';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { mockStudents } from './Dashboard';
+import { AttendanceRecord, User } from '@/types';
+import { loadStudents, saveAttendanceRecords } from '@/utils/fileStorage';
 
 const AttendanceRegistration = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  // Estado para o formulário
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isPresent, setIsPresent] = useState(true);
+  const [checkInTime, setCheckInTime] = useState('08:00');
+  const [checkOutTime, setCheckOutTime] = useState('12:00');
+  const [notes, setNotes] = useState('');
+  
+  // Estado para os estudantes
+  const [students, setStudents] = useState<Array<{ id: string; name: string; }>>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [selectedStudentsIds, setSelectedStudentsIds] = useState<string[]>([]);
-  const [selectionMode, setSelectionMode] = useState<'single' | 'multiple' | 'all'>('single');
+  const [selectionMode, setSelectionMode] = useState<'single' | 'multiple' | 'all'>('all');
   
-  // Configure default date range for the current week
-  const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Start on Monday
-  const weekEnd = endOfWeek(today, { weekStartsOn: 1 }); // End on Sunday
-  
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: weekStart,
-    to: weekEnd,
-  });
-
-  // Estado para controle do carregamento
-  const [isRegistering, setIsRegistering] = useState(false);
-
   useEffect(() => {
-    // Check if user exists in location state
-    const locationUser = location.state?.user;
+    const locationState = location.state;
     
-    if (locationUser) {
-      setUser(locationUser);
+    if (!locationState?.user) {
+      toast.error('Você precisa estar logado para cadastrar frequência');
+      navigate('/');
+      return;
+    }
+    
+    setUser(locationState.user);
+    
+    if (locationState.selectedStudentId) {
+      setSelectedStudentId(locationState.selectedStudentId);
+    }
+    
+    if (locationState.selectedStudentsIds) {
+      setSelectedStudentsIds(locationState.selectedStudentsIds);
+    }
+    
+    if (locationState.selectionMode) {
+      setSelectionMode(locationState.selectionMode);
+    }
+    
+    // Load students from passed data or from storage
+    if (locationState.students && locationState.students.length > 0) {
+      setStudents(locationState.students);
     } else {
-      // Check if there's user information in localStorage
-      const storedRole = localStorage.getItem('userRole');
-      const storedName = localStorage.getItem('userName');
-      
-      if (storedRole && storedName) {
-        setUser({
-          id: '1',
-          name: storedName,
-          role: storedRole as 'student' | 'school' | 'company',
-        });
-      } else {
-        // Redirect to login if no user
-        navigate('/');
-      }
-    }
-
-    // Redirect students as they cannot register attendance
-    const currentRole = locationUser?.role || localStorage.getItem('userRole');
-    if (currentRole === 'student') {
-      toast.error('Alunos não podem cadastrar frequência');
-      navigate('/dashboard');
-    }
-
-    // Check if we have selection mode and selected students from Dashboard
-    const locationSelectionMode = location.state?.selectionMode;
-    const locationSelectedStudentId = location.state?.selectedStudentId;
-    const locationSelectedStudentsIds = location.state?.selectedStudentsIds;
-
-    if (locationSelectionMode) {
-      setSelectionMode(locationSelectionMode);
-    }
-
-    if (locationSelectedStudentId) {
-      setSelectedStudentId(locationSelectedStudentId);
-    }
-
-    if (locationSelectedStudentsIds) {
-      setSelectedStudentsIds(locationSelectedStudentsIds);
+      // Load students from storage
+      loadStudents().then((loadedStudents) => {
+        if (loadedStudents && loadedStudents.length > 0) {
+          setStudents(loadedStudents);
+        }
+      });
     }
   }, [navigate, location]);
-
-  const handleRegister = async () => {
-    if (!dateRange.from || !dateRange.to) {
-      toast.error('Selecione o período inicial e final');
+  
+  // Verificar se o usuário pode cadastrar frequência neste dia da semana
+  const canRegisterForSelectedDate = () => {
+    if (!user || !selectedDate) return false;
+    
+    const dayOfWeek = selectedDate.getDay();
+    
+    // 0 = Domingo, 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado
+    const isSchoolDay = dayOfWeek === 1 || dayOfWeek === 2; // Segunda e Terça
+    const isCompanyDay = dayOfWeek === 3 || dayOfWeek === 4 || dayOfWeek === 5; // Quarta, Quinta e Sexta
+    
+    return (user.role === 'school' && isSchoolDay) || 
+           (user.role === 'company' && isCompanyDay);
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!canRegisterForSelectedDate()) {
+      const dayMessage = user?.role === 'school' 
+        ? 'segundas e terças-feiras' 
+        : 'quartas, quintas e sextas-feiras';
+      toast.error(`Você só pode cadastrar frequência para ${dayMessage}`);
       return;
     }
-
-    let studentsToProcess: typeof mockStudents = [];
-
-    if (selectionMode === 'all') {
-      studentsToProcess = mockStudents;
-    } else if (selectionMode === 'single' && selectedStudentId) {
-      const selectedStudent = mockStudents.find(student => student.id === selectedStudentId);
-      if (selectedStudent) {
-        studentsToProcess = [selectedStudent];
+    
+    setLoading(true);
+    
+    try {
+      let selectedStudents: { id: string; name: string }[] = [];
+      
+      if (selectionMode === 'single' && selectedStudentId) {
+        const student = students.find(s => s.id === selectedStudentId);
+        if (student) {
+          selectedStudents = [student];
+        }
+      } else if (selectionMode === 'multiple' && selectedStudentsIds.length > 0) {
+        selectedStudents = students.filter(s => selectedStudentsIds.includes(s.id));
       } else {
-        toast.error('Aluno não encontrado');
+        selectedStudents = students;
+      }
+      
+      if (selectedStudents.length === 0) {
+        toast.error('Selecione pelo menos um aluno');
+        setLoading(false);
         return;
       }
-    } else if (selectionMode === 'multiple' && selectedStudentsIds.length > 0) {
-      studentsToProcess = mockStudents.filter(student => selectedStudentsIds.includes(student.id));
-    } else {
-      toast.error('Selecione pelo menos um aluno');
-      return;
-    }
-
-    if (studentsToProcess.length === 0) {
-      toast.error('Nenhum aluno selecionado');
-      return;
-    }
-
-    setIsRegistering(true);
-
-    try {
-      // Generate attendance records for each day in the date range
-      const daysInRange = eachDayOfInterval({
-        start: dateRange.from,
-        end: dateRange.to,
+      
+      // Format date to YYYY-MM-DD
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      
+      // Get existing attendance records from storage
+      const existingRecords = await loadAttendanceRecords();
+      
+      // Create new attendance records
+      const newAttendanceRecords = selectedStudents.map(student => ({
+        id: `${Date.now()}-${student.id}`,
+        studentId: student.id,
+        studentName: student.name,
+        date: formattedDate,
+        isPresent,
+        ...(isPresent && { checkInTime, checkOutTime }),
+        ...(notes && { notes })
+      }));
+      
+      // Merge with existing records, overwriting duplicates
+      const recordsMap = new Map();
+      [...existingRecords, ...newAttendanceRecords].forEach(record => {
+        const key = `${record.studentId}-${record.date}`;
+        recordsMap.set(key, record);
       });
-
-      // Filter out weekends
-      const workDays = daysInRange.filter(day => !isWeekend(day));
       
-      // Create attendance records for each student
-      const newAttendanceRecords: AttendanceRecord[] = [];
+      const updatedRecords = Array.from(recordsMap.values());
       
-      studentsToProcess.forEach(student => {
-        workDays.forEach((day, dayIndex) => {
-          newAttendanceRecords.push({
-            id: `new-${Date.now()}-${student.id}-${dayIndex}`,
-            studentId: student.id,
-            studentName: student.name,
-            date: format(day, 'yyyy-MM-dd'),
-            isPresent: true,
-            checkInTime: '08:00',
-            checkOutTime: '12:00',
-          });
-        });
+      // Save to storage
+      await saveAttendanceRecords(updatedRecords);
+      
+      toast.success('Frequência cadastrada com sucesso!');
+      
+      // Redirecionar para o dashboard com os novos registros
+      navigate('/dashboard', {
+        state: {
+          user,
+          newAttendanceRecords: newAttendanceRecords
+        }
       });
-
-      // Store the new attendance records in localStorage
-      const existingRecords = localStorage.getItem('attendanceRecords');
-      const allRecords = existingRecords 
-        ? [...JSON.parse(existingRecords), ...newAttendanceRecords] 
-        : newAttendanceRecords;
-      
-      localStorage.setItem('attendanceRecords', JSON.stringify(allRecords));
-
-      toast.success(`Frequência registrada com sucesso para ${studentsToProcess.length} aluno(s)!`);
-      navigate('/dashboard', { state: { user, newAttendanceRecords } });
     } catch (error) {
-      toast.error('Erro ao registrar frequência');
       console.error('Erro ao registrar frequência:', error);
+      toast.error('Erro ao registrar frequência. Tente novamente.');
     } finally {
-      setIsRegistering(false);
+      setLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-background animate-fade-in">
       <Header user={user} />
       
-      <main className="container max-w-4xl py-8">
+      <main className="container py-8">
         <div className="mb-8 space-y-2">
           <h1 className="text-2xl font-bold">Cadastro de Frequência</h1>
           <p className="text-muted-foreground">
-            Cadastre a frequência para o período selecionado
+            {user?.role === 'school' ? 
+              'Registre a frequência dos alunos na escola (disponível segundas e terças)' : 
+              'Registre a frequência dos estagiários na empresa (disponível quartas, quintas e sextas)'}
           </p>
         </div>
-
-        <Alert className="mb-6">
-          <CalendarClock className="h-4 w-4" />
-          <AlertTitle>Lembrete de permissões</AlertTitle>
-          <AlertDescription>
-            Escolas podem marcar presença apenas às segundas e terças-feiras.
-            Empresas podem marcar presença apenas às quartas, quintas e sextas-feiras.
-          </AlertDescription>
-        </Alert>
         
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h2 className="text-lg font-medium mb-4">Selecione o(s) aluno(s)</h2>
-                  <StudentSelector 
-                    students={mockStudents} 
-                    selectedStudentId={selectedStudentId} 
-                    setSelectedStudentId={setSelectedStudentId}
-                    selectedStudentsIds={selectedStudentsIds}
-                    setSelectedStudentsIds={setSelectedStudentsIds}
-                    selectionMode={selectionMode}
-                    setSelectionMode={setSelectionMode}
+        <Card className="max-w-md mx-auto">
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-6 pt-6">
+              {/* Date Selection */}
+              <div className="space-y-2">
+                <Label>Selecione a Data:</Label>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    className="rounded-md border"
+                    locale={ptBR}
                   />
                 </div>
-                
-                <div>
-                  <h2 className="text-lg font-medium mb-4">Selecione o período</h2>
-                  <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Os finais de semana serão excluídos automaticamente.
+                {!canRegisterForSelectedDate() && (
+                  <p className="text-sm text-red-500">
+                    {user?.role === 'school' ? 
+                      'Você só pode registrar frequência às segundas e terças-feiras.' :
+                      'Você só pode registrar frequência às quartas, quintas e sextas-feiras.'}
                   </p>
+                )}
+              </div>
+              
+              {/* Attendance Status */}
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="isPresent" 
+                    checked={isPresent} 
+                    onCheckedChange={(checked) => checked !== "indeterminate" && setIsPresent(checked)}
+                  />
+                  <Label htmlFor="isPresent">Aluno presente</Label>
                 </div>
               </div>
               
-              <div className="flex justify-end space-x-4">
-                <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleRegister} 
-                  disabled={isRegistering}
-                >
-                  {isRegistering ? 'Cadastrando...' : 'Cadastrar Frequência'}
-                </Button>
+              {/* Check-in and Check-out Time */}
+              {isPresent && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="checkInTime">Horário de Entrada:</Label>
+                    <Input
+                      id="checkInTime"
+                      type="time"
+                      value={checkInTime}
+                      onChange={(e) => setCheckInTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="checkOutTime">Horário de Saída:</Label>
+                    <Input
+                      id="checkOutTime"
+                      type="time"
+                      value={checkOutTime}
+                      onChange={(e) => setCheckOutTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Observações:</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Opcional"
+                />
               </div>
-            </div>
-          </CardContent>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => navigate(-1)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading || !canRegisterForSelectedDate()}
+              >
+                {loading ? 'Salvando...' : 'Salvar Frequência'}
+              </Button>
+            </CardFooter>
+          </form>
         </Card>
       </main>
     </div>

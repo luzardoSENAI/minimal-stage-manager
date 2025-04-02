@@ -2,12 +2,11 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Search } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from '@/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
@@ -54,16 +53,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRan
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 z-50" align="start">
-          <div className="p-2 border-b">
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 opacity-50" />
-              <Input 
-                type="text"
-                placeholder="Pesquisar..."
-                className="h-8 w-auto focus-visible:ring-0"
-              />
-            </div>
-          </div>
           <Calendar
             initialFocus
             mode="range"

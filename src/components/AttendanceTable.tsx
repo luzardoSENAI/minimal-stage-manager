@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format, parseISO, isMonday, isTuesday, isWednesday, isThursday, isFriday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -17,12 +18,14 @@ interface AttendanceTableProps {
   attendanceData: AttendanceRecord[];
   userRole: UserRole;
   setAttendanceData: React.Dispatch<React.SetStateAction<AttendanceRecord[]>>;
+  selectionMode?: 'single' | 'multiple' | 'all';
 }
 
 const AttendanceTable: React.FC<AttendanceTableProps> = ({ 
   attendanceData = [], 
   userRole,
-  setAttendanceData 
+  setAttendanceData,
+  selectionMode = 'all'
 }) => {
   const handleAttendanceChange = (recordId: string, isPresent: boolean) => {
     const record = attendanceData.find(record => record.id === recordId);

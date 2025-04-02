@@ -14,15 +14,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
-import { mockStudents } from '@/pages/Dashboard';
+import { Student } from '@/types';
+import { saveStudents } from '@/utils/fileStorage';
 
-const AddStudentButton = () => {
+interface AddStudentButtonProps {
+  onStudentAdded?: (student: Student) => void;
+}
+
+const AddStudentButton: React.FC<AddStudentButtonProps> = ({ onStudentAdded }) => {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [contact, setContact] = useState('');
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name || !company || !contact) {
@@ -30,25 +35,41 @@ const AddStudentButton = () => {
       return;
     }
     
-    // Em um cenário real, aqui teríamos uma chamada de API
-    // Para este exemplo, vamos apenas simular o cadastro
-    const newStudent = {
+    // Create new student object
+    const newStudent: Student = {
       id: `${Date.now()}`,
       name,
       company,
       contact
     };
     
-    // Adiciona à lista mockada (em um cenário real, seria no banco de dados)
-    mockStudents.push(newStudent);
-    
-    toast.success('Aluno cadastrado com sucesso!');
-    setOpen(false);
-    
-    // Limpa o formulário
-    setName('');
-    setCompany('');
-    setContact('');
+    try {
+      // Get existing students from localStorage
+      const storedStudents = localStorage.getItem('students');
+      const existingStudents: Student[] = storedStudents ? JSON.parse(storedStudents) : [];
+      
+      // Add new student to the list
+      const updatedStudents = [...existingStudents, newStudent];
+      
+      // Save to text file
+      await saveStudents(updatedStudents);
+      
+      // Notify parent component about the new student
+      if (onStudentAdded) {
+        onStudentAdded(newStudent);
+      }
+      
+      toast.success('Aluno cadastrado com sucesso!');
+      setOpen(false);
+      
+      // Limpa o formulário
+      setName('');
+      setCompany('');
+      setContact('');
+    } catch (err) {
+      console.error('Error saving student:', err);
+      toast.error('Erro ao salvar o aluno. Tente novamente.');
+    }
   };
   
   return (

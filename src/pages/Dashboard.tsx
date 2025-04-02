@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { startOfWeek, endOfWeek, parseISO } from 'date-fns';
@@ -13,8 +12,9 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AttendanceRecord, DateRange, User, UserRole } from '@/types';
+import { loadAttendanceRecords, loadStudents, saveAttendanceRecords } from '@/utils/fileStorage';
 
-// Mock data for attendance records
+// Mock data for attendance records as fallback
 const mockAttendanceData: AttendanceRecord[] = [
   {
     id: '1',
@@ -70,7 +70,7 @@ const mockAttendanceData: AttendanceRecord[] = [
   },
 ];
 
-// Lista de estudantes
+// Lista de estudantes como fallback
 export const mockStudents = [
   { id: '101', name: 'Ana Silva', company: 'Tech Solutions', contact: 'ana.silva@email.com' },
   { id: '102', name: 'Carlos Mendes', company: 'InnovaSoft', contact: 'carlos.mendes@email.com' },
@@ -80,38 +80,53 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
-  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>(mockAttendanceData);
-  const [filteredData, setFilteredData] = useState<AttendanceRecord[]>(mockAttendanceData);
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+  const [filteredData, setFilteredData] = useState<AttendanceRecord[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedStudentForRegistration, setSelectedStudentForRegistration] = useState<string | null>(null);
   const [selectedStudentsIds, setSelectedStudentsIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState<'single' | 'multiple' | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [students, setStudents] = useState<typeof mockStudents>([]);
+
   // Configurar o intervalo de datas para a semana atual por padrão
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Começa na segunda-feira
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 }); // Termina no domingo
-  
+
   const [dateRange, setDateRange] = useState<DateRange>({
     from: weekStart,
     to: weekEnd,
   });
 
   useEffect(() => {
-    // Check for stored attendance records in localStorage
-    const storedRecords = localStorage.getItem('attendanceRecords');
-    if (storedRecords) {
-      const parsedRecords = JSON.parse(storedRecords);
-      setAttendanceData(prevData => {
-        // Create a unique set of records by ID
-        const recordMap = new Map();
-        [...prevData, ...parsedRecords].forEach(record => {
-          recordMap.set(record.id, record);
-        });
-        return Array.from(recordMap.values());
-      });
-    }
+    // Load data from text files
+    const loadData = async () => {
+      try {
+        // Load attendance records
+        const records = await loadAttendanceRecords();
+        if (records && records.length > 0) {
+          setAttendanceData(records);
+        } else {
+          setAttendanceData(mockAttendanceData);
+        }
+        
+        // Load students
+        const loadedStudents = await loadStudents();
+        if (loadedStudents && loadedStudents.length > 0) {
+          setStudents(loadedStudents);
+        } else {
+          setStudents(mockStudents);
+        }
+      } catch (err) {
+        console.error("Error loading data from files:", err);
+        // Use mock data as fallback
+        setAttendanceData(mockAttendanceData);
+        setStudents(mockStudents);
+      }
+    };
+    
+    loadData();
 
     // Check for new attendance records in location state
     const newRecords = location.state?.newAttendanceRecords;
@@ -122,7 +137,12 @@ const Dashboard = () => {
         [...prevData, ...newRecords].forEach(record => {
           recordMap.set(record.id, record);
         });
-        return Array.from(recordMap.values());
+        const updatedRecords = Array.from(recordMap.values());
+        
+        // Save to file storage
+        saveAttendanceRecords(updatedRecords);
+        
+        return updatedRecords;
       });
     }
 
@@ -220,9 +240,16 @@ const Dashboard = () => {
         user,
         selectedStudentId: selectedStudentId,
         selectedStudentsIds: selectedStudentsIds,
-        selectionMode: selectionMode
+        selectionMode: selectionMode,
+        students: students
       } 
     });
+  };
+
+  const handleAttendanceUpdate = (updatedRecords: AttendanceRecord[]) => {
+    setAttendanceData(updatedRecords);
+    // Save the updated records to file
+    saveAttendanceRecords(updatedRecords);
   };
 
   return (
@@ -263,7 +290,7 @@ const Dashboard = () => {
               {user?.role !== 'student' && (
                 <div className="flex flex-wrap gap-2 items-center">
                   <StudentSelector 
-                    students={mockStudents} 
+                    students={students} 
                     selectedStudentId={selectedStudentId} 
                     setSelectedStudentId={setSelectedStudentId}
                     selectedStudentsIds={selectedStudentsIds}
@@ -277,7 +304,14 @@ const Dashboard = () => {
               {user?.role !== 'student' && (
                 <div className="flex flex-wrap gap-2 items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <AddStudentButton />
+                    <AddStudentButton onStudentAdded={(student) => {
+                      setStudents(prev => {
+                        const newStudents = [...prev, student];
+                        // Save the updated students to file
+                        saveStudents(newStudents);
+                        return newStudents;
+                      });
+                    }} />
                     <Button 
                       onClick={handleRegisterAttendance}
                       variant="outline"
@@ -296,7 +330,8 @@ const Dashboard = () => {
         <AttendanceTable 
           attendanceData={filteredData}
           userRole={user?.role || 'student'}
-          setAttendanceData={setAttendanceData}
+          setAttendanceData={handleAttendanceUpdate}
+          selectionMode={selectionMode}
         />
         
         {/* Export buttons below the data table */}
