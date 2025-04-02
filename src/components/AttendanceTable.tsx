@@ -40,13 +40,18 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
       return;
     }
     
-    setAttendanceData(prevData => 
-      prevData.map(record => 
+    setAttendanceData(prevData => {
+      const updatedData = prevData.map(record => 
         record.id === recordId 
           ? { ...record, isPresent } 
           : record
-      )
-    );
+      );
+      
+      // Update localStorage
+      localStorage.setItem('attendanceRecords', JSON.stringify(updatedData));
+      
+      return updatedData;
+    });
     
     toast.success('Frequência atualizada com sucesso');
   };
@@ -72,23 +77,124 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
            (userRole === 'company' && isCompanyDay);
   };
 
+  // Group attendance by student for school and company views
+  const groupedAttendance = React.useMemo(() => {
+    if (userRole === 'student') {
+      return {};
+    }
+    
+    const grouped: Record<string, AttendanceRecord[]> = {};
+    
+    attendanceData.forEach(record => {
+      if (!grouped[record.studentId]) {
+        grouped[record.studentId] = [];
+      }
+      grouped[record.studentId].push(record);
+    });
+    
+    return grouped;
+  }, [attendanceData, userRole]);
+
+  // Render table differently based on user role
+  if (userRole !== 'student') {
+    // For school and company users - group by student
+    return (
+      <div className="space-y-6 animate-fade-in">
+        {Object.keys(groupedAttendance).length > 0 ? (
+          Object.entries(groupedAttendance).map(([studentId, records]) => {
+            // Get student name from first record
+            const studentName = records[0]?.studentName || "Unknown Student";
+            
+            return (
+              <div key={studentId} className="border border-border rounded-lg overflow-hidden shadow-sm">
+                <div className="bg-secondary p-4">
+                  <h3 className="text-lg font-medium">{studentName}</h3>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="px-4 py-2 text-left">Data</th>
+                        <th className="px-4 py-2 text-left">Presente</th>
+                        <th className="px-4 py-2 text-left">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {records.map(record => (
+                        <tr key={record.id} className="border-t border-border hover:bg-muted/20">
+                          <td className="px-4 py-2">
+                            {formatDate(record.date)}
+                            <div className="text-xs text-muted-foreground capitalize">
+                              {getDayOfWeek(record.date)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2">
+                            {record.isPresent ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                                Presente
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
+                                Ausente
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2">
+                            {canEditRecord(record.date) ? (
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`attendance-${record.id}`}
+                                  checked={record.isPresent}
+                                  onCheckedChange={(checked) => 
+                                    handleAttendanceChange(record.id, checked === true)
+                                  }
+                                />
+                                <label 
+                                  htmlFor={`attendance-${record.id}`}
+                                  className="text-sm cursor-pointer"
+                                >
+                                  Marcar presença
+                                </label>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                Não disponível
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="text-center py-8 text-muted-foreground border border-border rounded-lg">
+            Nenhum registro de frequência encontrado para o período selecionado
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // For student users - regular table
   return (
     <div className="w-full overflow-auto rounded-md border border-border shadow-sm animate-fade-in">
       <table className="attendance-table">
         <thead>
           <tr>
-            <th>Aluno</th>
             <th>Data</th>
             <th>Dia da Semana</th>
             <th>Presente</th>
-            {userRole !== 'student' && <th>Ações</th>}
           </tr>
         </thead>
         <tbody>
           {attendanceData.length > 0 ? (
             attendanceData.map((record) => (
               <tr key={record.id} className="border-t border-border">
-                <td>{record.studentName}</td>
                 <td>{formatDate(record.date)}</td>
                 <td className="capitalize">{getDayOfWeek(record.date)}</td>
                 <td>
@@ -102,36 +208,11 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
                     </span>
                   )}
                 </td>
-                {userRole !== 'student' && (
-                  <td>
-                    {canEditRecord(record.date) ? (
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`attendance-${record.id}`}
-                          checked={record.isPresent}
-                          onCheckedChange={(checked) => 
-                            handleAttendanceChange(record.id, checked === true)
-                          }
-                        />
-                        <label 
-                          htmlFor={`attendance-${record.id}`}
-                          className="text-sm cursor-pointer"
-                        >
-                          Marcar presença
-                        </label>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Não disponível
-                      </span>
-                    )}
-                  </td>
-                )}
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={userRole !== 'student' ? 5 : 4} className="text-center py-8 text-muted-foreground">
+              <td colSpan={3} className="text-center py-8 text-muted-foreground">
                 Nenhum registro de frequência encontrado para o período selecionado
               </td>
             </tr>

@@ -82,6 +82,7 @@ const Dashboard = () => {
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>(mockAttendanceData);
   const [filteredData, setFilteredData] = useState<AttendanceRecord[]>(mockAttendanceData);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentForRegistration, setSelectedStudentForRegistration] = useState<string | null>(null);
   
   // Configurar o intervalo de datas para a semana atual por padrão
   const today = new Date();
@@ -94,6 +95,33 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
+    // Check for stored attendance records in localStorage
+    const storedRecords = localStorage.getItem('attendanceRecords');
+    if (storedRecords) {
+      const parsedRecords = JSON.parse(storedRecords);
+      setAttendanceData(prevData => {
+        // Create a unique set of records by ID
+        const recordMap = new Map();
+        [...prevData, ...parsedRecords].forEach(record => {
+          recordMap.set(record.id, record);
+        });
+        return Array.from(recordMap.values());
+      });
+    }
+
+    // Check for new attendance records in location state
+    const newRecords = location.state?.newAttendanceRecords;
+    if (newRecords) {
+      setAttendanceData(prevData => {
+        // Create a unique set of records by ID
+        const recordMap = new Map();
+        [...prevData, ...newRecords].forEach(record => {
+          recordMap.set(record.id, record);
+        });
+        return Array.from(recordMap.values());
+      });
+    }
+
     console.log("Dashboard useEffect running");
     console.log("Location state:", location.state);
     
@@ -160,6 +188,15 @@ const Dashboard = () => {
     setFilteredData(filtered);
   }, [dateRange, attendanceData, selectedStudentId]);
 
+  const handleRegisterAttendance = () => {
+    navigate('/attendance-registration', { 
+      state: { 
+        user,
+        selectedStudentId: selectedStudentForRegistration
+      } 
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background animate-fade-in">
       <Header user={user} />
@@ -191,7 +228,7 @@ const Dashboard = () => {
                 {user?.role !== 'student' && <AddStudentButton />}
                 {user?.role !== 'student' && (
                   <Button 
-                    onClick={() => navigate('/attendance-registration', { state: { user } })}
+                    onClick={handleRegisterAttendance}
                     variant="outline"
                     className="flex items-center gap-2"
                   >

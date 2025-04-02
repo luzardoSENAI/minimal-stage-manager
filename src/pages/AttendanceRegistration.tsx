@@ -1,18 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Header from '@/components/Header';
 import DateRangePicker from '@/components/DateRangePicker';
-import { DateRange, User } from '@/types';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import StudentSelector from '@/components/StudentSelector';
+import { DateRange, User, AttendanceRecord } from '@/types';
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isWeekend } from 'date-fns';
 import { toast } from 'sonner';
+import { mockStudents } from './Dashboard';
 
 const AttendanceRegistration = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   
   // Configure default date range for the current week
   const today = new Date();
@@ -24,7 +27,7 @@ const AttendanceRegistration = () => {
     to: weekEnd,
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Check if user exists in location state
     const locationUser = location.state?.user;
     
@@ -61,9 +64,48 @@ const AttendanceRegistration = () => {
       return;
     }
 
-    // Here we would typically save the registered attendance
+    if (!selectedStudentId) {
+      toast.error('Selecione um aluno');
+      return;
+    }
+
+    // Get the selected student
+    const selectedStudent = mockStudents.find(student => student.id === selectedStudentId);
+    if (!selectedStudent) {
+      toast.error('Aluno não encontrado');
+      return;
+    }
+
+    // Generate attendance records for each day in the date range
+    const daysInRange = eachDayOfInterval({
+      start: dateRange.from,
+      end: dateRange.to,
+    });
+
+    // Filter out weekends
+    const workDays = daysInRange.filter(day => !isWeekend(day));
+    
+    // Create attendance records
+    const newAttendanceRecords: AttendanceRecord[] = workDays.map((day, index) => ({
+      id: `new-${Date.now()}-${index}`,
+      studentId: selectedStudent.id,
+      studentName: selectedStudent.name,
+      date: format(day, 'yyyy-MM-dd'),
+      isPresent: true,
+      checkInTime: '08:00',
+      checkOutTime: '12:00',
+    }));
+
+    // Store the new attendance records in localStorage
+    const existingRecords = localStorage.getItem('attendanceRecords');
+    const allRecords = existingRecords 
+      ? [...JSON.parse(existingRecords), ...newAttendanceRecords] 
+      : newAttendanceRecords;
+    
+    localStorage.setItem('attendanceRecords', JSON.stringify(allRecords));
+
     toast.success('Frequência registrada com sucesso!');
-    navigate('/dashboard');
+    navigate('/dashboard', { state: { user, newAttendanceRecords } });
   };
 
   return (
@@ -81,9 +123,20 @@ const AttendanceRegistration = () => {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col space-y-6">
-              <div>
-                <h2 className="text-lg font-medium mb-2">Selecione o período</h2>
-                <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h2 className="text-lg font-medium mb-2">Selecione o aluno</h2>
+                  <StudentSelector 
+                    students={mockStudents} 
+                    selectedStudentId={selectedStudentId} 
+                    setSelectedStudentId={setSelectedStudentId} 
+                  />
+                </div>
+                
+                <div>
+                  <h2 className="text-lg font-medium mb-2">Selecione o período</h2>
+                  <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+                </div>
               </div>
               
               <div className="flex justify-end space-x-4">
