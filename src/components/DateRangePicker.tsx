@@ -12,7 +12,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { DayClickEventHandler } from 'react-day-picker';
 
 interface DateRangePickerProps {
   dateRange: DateRange;
@@ -20,11 +19,10 @@ interface DateRangePickerProps {
 }
 
 const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRange }) => {
-  const handleSelect = (range: { from: Date; to?: Date }) => {
-    setDateRange({
-      from: range.from,
-      to: range.to
-    });
+  const handleSelect = (range: DateRange | undefined) => {
+    if (range) {
+      setDateRange(range);
+    }
   };
 
   return (
@@ -35,7 +33,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRan
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[300px] justify-start text-left font-normal",
+              "w-full md:w-[300px] justify-start text-left font-normal",
               !dateRange && "text-muted-foreground"
             )}
           >
@@ -59,13 +57,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ dateRange, setDateRan
             initialFocus
             mode="range"
             defaultMonth={dateRange?.from}
-            selected={{
-              from: dateRange.from,
-              to: dateRange.to
-            }}
+            selected={dateRange}
             onSelect={handleSelect}
             locale={ptBR}
-            numberOfMonths={2}
+            numberOfMonths={1}
+            className="pointer-events-auto"
           />
         </PopoverContent>
       </Popover>
