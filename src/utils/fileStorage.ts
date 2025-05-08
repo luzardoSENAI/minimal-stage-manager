@@ -12,6 +12,8 @@ export const getStudents = async (): Promise<Student[]> => {
   }
 };
 
+export const loadStudents = getStudents; // Alias for backward compatibility
+
 export const addStudent = async (student: Student): Promise<void> => {
   try {
     const students = await getStudents();
@@ -19,6 +21,15 @@ export const addStudent = async (student: Student): Promise<void> => {
     localStorage.setItem('students', JSON.stringify(students));
   } catch (error) {
     console.error("Error adding student:", error);
+    throw error;
+  }
+};
+
+export const saveStudents = async (students: Student[]): Promise<void> => {
+  try {
+    localStorage.setItem('students', JSON.stringify(students));
+  } catch (error) {
+    console.error("Error saving students:", error);
     throw error;
   }
 };
@@ -34,6 +45,8 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
   }
 };
 
+export const loadAttendanceRecords = getAttendanceRecords; // Alias for backward compatibility
+
 export const addAttendanceRecord = async (record: AttendanceRecord): Promise<void> => {
   try {
     const records = await getAttendanceRecords();
@@ -41,6 +54,15 @@ export const addAttendanceRecord = async (record: AttendanceRecord): Promise<voi
     localStorage.setItem('attendanceRecords', JSON.stringify(records));
   } catch (error) {
     console.error("Error adding attendance record:", error);
+    throw error;
+  }
+};
+
+export const saveAttendanceRecords = async (records: AttendanceRecord[]): Promise<void> => {
+  try {
+    localStorage.setItem('attendanceRecords', JSON.stringify(records));
+  } catch (error) {
+    console.error("Error saving attendance records:", error);
     throw error;
   }
 };
