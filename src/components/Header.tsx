@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Logo from './Logo';
 import ThemeToggle from './ThemeToggle';
+import ColorThemeToggle from './ColorThemeToggle';
 import { User } from '@/types';
 
 interface HeaderProps {
@@ -38,6 +39,7 @@ const Header: React.FC<HeaderProps> = ({ user }) => {
       
       {user && (
         <div className="flex items-center gap-4">
+          <ColorThemeToggle />
           <ThemeToggle />
           
           <div className="text-right mr-2">

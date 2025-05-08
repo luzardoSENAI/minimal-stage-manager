@@ -38,6 +38,24 @@
     --radius: 0.5rem;
   }
 
+  .color-blue {
+    --primary: 210 90% 60%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 221 83% 53%;
+  }
+
+  .color-green {
+    --primary: 142 76% 36%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 142 76% 36%;
+  }
+
+  .color-orange {
+    --primary: 24 95% 53%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 24 95% 53%;
+  }
+
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
@@ -66,6 +84,21 @@
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 224 76% 48%;
+  }
+
+  .dark.color-blue {
+    --primary: 210 90% 60%;
+    --ring: 224 76% 48%;
+  }
+
+  .dark.color-green {
+    --primary: 142 76% 46%;
+    --ring: 142 76% 46%;
+  }
+
+  .dark.color-orange {
+    --primary: 24 95% 63%;
+    --ring: 24 95% 63%;
   }
 
   * {
